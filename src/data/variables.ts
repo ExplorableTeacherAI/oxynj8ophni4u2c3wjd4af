@@ -85,30 +85,83 @@ export const variableDefinitions: Record<string, VariableDefinition> = {
     // SECTION: Points, Chords and Arcs
     // ========================================
 
-    /** Angles (in degrees, measured anticlockwise from east) of the dots the
-     *  student has dropped on the circle's rim. Index 0 and 1 are the ends of
-     *  the chord; index 2 is the vertex of the angle standing on it. */
-    circlePartsPoints: {
-        defaultValue: [],
-        type: 'array',
-        label: 'Dots on the rim',
-        description: 'Rim positions of the dots the student has placed, in degrees',
+    /** Which part the student is about to draw:
+     *  'radius' | 'diameter' | 'chord' | 'tangent' | 'angle' */
+    circlePartsTool: {
+        defaultValue: 'radius',
+        type: 'select',
+        label: 'Part to draw',
+        description: 'Which part of the circle the student has picked to draw next',
+        options: ['radius', 'diameter', 'chord', 'tangent', 'angle'],
+        color: '#62D0AD',
     },
 
-    /** Mirror of circlePartsPoints.length so guided hints can watch progress
-     *  and so a reset can be triggered by writing 0. */
+    /** Rim position of the radius, in degrees; -1 means it has not been drawn. */
+    circlePartsRadius: {
+        defaultValue: -1,
+        type: 'number',
+        label: 'Radius position',
+        description: 'Where the drawn radius meets the rim, in degrees',
+        min: -1,
+        max: 360,
+        step: 1,
+    },
+
+    /** Rim position of one end of the diameter; -1 means not drawn. */
+    circlePartsDiameter: {
+        defaultValue: -1,
+        type: 'number',
+        label: 'Diameter position',
+        description: 'Where one end of the drawn diameter meets the rim, in degrees',
+        min: -1,
+        max: 360,
+        step: 1,
+    },
+
+    /** Rim position where the tangent touches; -1 means not drawn. */
+    circlePartsTangent: {
+        defaultValue: -1,
+        type: 'number',
+        label: 'Tangent position',
+        description: 'Where the drawn tangent touches the rim, in degrees',
+        min: -1,
+        max: 360,
+        step: 1,
+    },
+
+    /** Rim positions of the chord's two ends, in degrees. */
+    circlePartsChord: {
+        defaultValue: [],
+        type: 'array',
+        label: 'Chord ends',
+        description: 'Rim positions of the two ends of the drawn chord, in degrees',
+    },
+
+    /** Rim position of the corner standing on the chord; -1 means not drawn. */
+    circlePartsAngle: {
+        defaultValue: -1,
+        type: 'number',
+        label: 'Angle position',
+        description: 'Where the corner standing on the chord sits, in degrees',
+        min: -1,
+        max: 360,
+        step: 1,
+    },
+
+    /** How many parts the student has drawn. Guided hints watch it, and writing
+     *  0 clears the drawing. */
     circlePartsPointCount: {
         defaultValue: 0,
         type: 'number',
-        label: 'Dots placed',
-        description: 'How many dots the student has dropped on the rim',
+        label: 'Parts drawn',
+        description: 'How many parts the student has drawn on the circle',
         min: 0,
-        max: 3,
+        max: 5,
         step: 1,
     },
 
     /** Shared hover channel between the prose and the circle drawing.
-     *  Values: '' | 'chord' | 'arc' | 'angle' */
+     *  Values: '' | 'radius' | 'diameter' | 'chord' | 'tangent' | 'arc' | 'angle' */
     circlePartsHighlight: {
         defaultValue: '',
         type: 'text',
@@ -354,6 +407,18 @@ export const variableDefinitions: Record<string, VariableDefinition> = {
         description: 'Student answer for the corner found by using both rules in turn',
         placeholder: '???',
         correctAnswer: ['112', '112°'],
+        color: '#8E90F5',
+    },
+
+    /** Assessment: what a chord through the centre becomes. */
+    answerChordThroughCentre: {
+        defaultValue: '',
+        type: 'select',
+        label: 'Chord through the centre',
+        description: 'Student answer for what a chord through the centre is called',
+        placeholder: '???',
+        correctAnswer: 'diameter',
+        options: ['radius', 'diameter', 'tangent', 'arc'],
         color: '#8E90F5',
     },
 
