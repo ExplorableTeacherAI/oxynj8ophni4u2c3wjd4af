@@ -218,6 +218,76 @@ export const variableDefinitions: Record<string, VariableDefinition> = {
         color: '#8E90F5',
     },
 
+    // ========================================
+    // SECTION: Opposite Corners of a Cyclic Quadrilateral
+    // ========================================
+
+    /** The four corners on the rim, in degrees anticlockwise from east, kept in
+     *  order around the circle. Index 3 is the corner left blank. */
+    cyclicQuadCorners: {
+        defaultValue: [40, 110, 200, 320],
+        type: 'array',
+        label: 'Quadrilateral corners',
+        description: 'Rim positions of the four corners, in degrees',
+    },
+
+    /** How wide the student has opened the faint copy of the blank corner. */
+    cyclicQuadGuess: {
+        defaultValue: 120,
+        type: 'number',
+        label: 'Guessed corner size',
+        description: 'Size the student thinks the blank corner is, in degrees',
+        unit: '°',
+        min: 10,
+        max: 170,
+        step: 1,
+        color: '#94A3B8',
+    },
+
+    /** 0 before the student lets go of their guess, 1 once the truth shows. */
+    cyclicQuadRevealed: {
+        defaultValue: 0,
+        type: 'number',
+        label: 'Answer revealed',
+        description: 'Whether the blank corner is showing its real size yet',
+        min: 0,
+        max: 1,
+        step: 1,
+    },
+
+    /** Shared hover channel between the prose and the corners.
+     *  Values: '' | 'diagonal' | 'neighbours' */
+    cyclicQuadHighlight: {
+        defaultValue: '',
+        type: 'text',
+        label: 'Corner pair highlight',
+        description: 'Which pair of corners is currently highlighted',
+        color: '#62D0AD',
+        bgColor: 'rgba(98, 208, 173, 0.2)',
+    },
+
+    /** Assessment: the fourth corner, where the misconception gives 70 or 110. */
+    answerFourthCorner: {
+        defaultValue: '',
+        type: 'text',
+        label: 'Fourth corner',
+        description: 'Student answer for the missing corner of a cyclic quadrilateral',
+        placeholder: '???',
+        correctAnswer: ['65', '65°'],
+        color: '#8E90F5',
+    },
+
+    /** Assessment: the total of all four corners. */
+    answerCornerTotal: {
+        defaultValue: '',
+        type: 'text',
+        label: 'Total of four corners',
+        description: 'Student answer for the sum of all four corners',
+        placeholder: '???',
+        correctAnswer: ['360', '360°'],
+        color: '#8E90F5',
+    },
+
     /** Assessment: how many chords three rim points make. */
     answerChordCount: {
         defaultValue: '',
