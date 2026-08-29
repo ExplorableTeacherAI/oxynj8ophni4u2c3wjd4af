@@ -514,11 +514,7 @@ export const sameSegmentExploreBlocks: ReactElement[] = [
 
     <StackLayout key="layout-same-segment-reflect" maxWidth="xl">
         <Block id="same-segment-reflect" padding="sm">
-            <EditableParagraph id="para-same-segment-reflect" blockId="same-segment-reflect">
-                It measures exactly the same as the far one, however squashed it looks. Drag either
-                corner along the arc and the number holds steady. These are called angles in the
-                same segment.
-            </EditableParagraph>
+            <EditableParagraph id="para-same-segment-reflect" blockId="same-segment-reflect">It measures exactly the same as the far one, however squashed it looks. Drag either corner along the arc and the number holds steady. These are called angles in the same segment./</EditableParagraph>
         </Block>
     </StackLayout>,
 
