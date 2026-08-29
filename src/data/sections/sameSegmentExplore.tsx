@@ -530,54 +530,7 @@ export const sameSegmentExploreBlocks: ReactElement[] = [
 
     <StackLayout key="layout-same-segment-question-compare" maxWidth="xl">
         <Block id="same-segment-question-compare" padding="md">
-            <EditableParagraph id="para-same-segment-question-compare" blockId="same-segment-question-compare">
-                Two corners stand on the same chord from the same side, one squeezed right beside
-                the chord and one far above it. Compared with the far corner, the near corner is{" "}
-                <InlineFeedback
-                    varName="answerNearCornerSize"
-                    correctValue="exactly the same"
-                    position="terminal"
-                    successMessage="— yes, sitting near the chord makes a corner look wider, but the measurement never budges"
-                    failureMessage="— that is the trap."
-                    hint="Being close to the chord changes how the corner looks, not how much it turns"
-                    visualizationHint={{
-                        blockId: "same-segment-visual",
-                        hintKey: "feedback-same-segment-compare",
-                        label: "Discover it yourself",
-                        resetVars: {
-                            sameSegmentRevealed: 0,
-                            sameSegmentGuess: 110,
-                            sameSegmentNearSpot: 0.08,
-                            sameSegmentFarSpot: 0.5,
-                        },
-                        steps: [
-                            {
-                                gesture: "drag-circular",
-                                label: "Open the dashed corner to any size, then let go to see the real one",
-                                position: { x: "50%", y: "47%" },
-                                completionVar: "sameSegmentRevealed",
-                                completionValue: 1,
-                                completionTolerance: 0.4,
-                            },
-                            {
-                                gesture: "drag-circular",
-                                label: "Now drag that near corner up the arc and watch its number",
-                                position: { x: "74%", y: "54%" },
-                                completionVar: "sameSegmentNearSpot",
-                                completionValue: 0.7,
-                                completionTolerance: 0.2,
-                            },
-                        ],
-                    }}
-                >
-                    <InlineClozeChoice
-                        varName="answerNearCornerSize"
-                        correctAnswer="exactly the same"
-                        options={["bigger", "smaller", "exactly the same", "impossible to tell"]}
-                        {...choicePropsFromDefinition(getVariableInfo('answerNearCornerSize'))}
-                    />
-                </InlineFeedback>.
-            </EditableParagraph>
+            <EditableParagraph id="para-same-segment-question-compare" blockId="same-segment-question-compare">Two corners stand on the same chord from the same side, one squeezed right beside the chord and one far above it. Compared with the far corner, the near corner is <InlineFeedback varName={"answerNearCornerSize"} correctValue={"exactly the same"} caseSensitive={false} position={"terminal"} successMessage={"— yes, sitting near the chord makes a corner look wider, but the measurement never budges"} failureMessage={"— that is the trap."} hint={"Being close to the chord changes how the corner looks, not how much it turns"} reviewLabel={"Review this concept"} visualizationHint={{"blockId": "same-segment-visual", "hintKey": "feedback-same-segment-compare", "label": "Discover it yourself", "resetVars": {"sameSegmentRevealed": 0, "sameSegmentGuess": 110, "sameSegmentNearSpot": 0.08, "sameSegmentFarSpot": 0.5}, "steps": [{"gesture": "drag-circular", "label": "Open the dashed corner to any size, then let go to see the real one", "position": {"x": "50%", "y": "47%"}, "completionVar": "sameSegmentRevealed", "completionValue": 1, "completionTolerance": 0.4}, {"gesture": "drag-circular", "label": "Now drag that near corner up the arc and watch its number", "position": {"x": "74%", "y": "54%"}, "completionVar": "sameSegmentNearSpot", "completionValue": 0.7, "completionTolerance": 0.2}]}}><InlineClozeChoice varName={"answerNearCornerSize"} correctAnswer={"exactly the same"} options={["bigger", "smaller", "exactly the same", "impossible to tell"]} placeholder={"???"} color={"#E53935"} bgColor={"rgba(59, 130, 246, 0.35)"} id={"choice-1787984476254-dv666"} /></InlineFeedback>.</EditableParagraph>
         </Block>
     </StackLayout>,
 
