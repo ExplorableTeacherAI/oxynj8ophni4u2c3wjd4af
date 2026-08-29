@@ -288,6 +288,75 @@ export const variableDefinitions: Record<string, VariableDefinition> = {
         color: '#8E90F5',
     },
 
+    // ========================================
+    // SECTION: Both Theorems Together
+    // ========================================
+
+    /** Five points on the rim, in degrees anticlockwise from east and kept in
+     *  order: 0 and 3 are the chord's ends, 1 and 2 stand on it from the same
+     *  side, and 4 completes the cyclic quadrilateral on the other arc. */
+    bothRulesPoints: {
+        defaultValue: [20, 76, 140, 190, 290],
+        type: 'array',
+        label: 'Circle points',
+        description: 'Rim positions of the five points carrying both rules, in degrees',
+    },
+
+    /** Which rule is lit: 0 = angles in the same segment, 1 = cyclic quadrilateral. */
+    bothRulesMode: {
+        defaultValue: 0,
+        type: 'number',
+        label: 'Rule on show',
+        description: 'Which of the two rules is currently lit up',
+        min: 0,
+        max: 1,
+        step: 1,
+    },
+
+    /** Shared hover channel between the prose and the two rules.
+     *  Values: '' | 'sameSegment' | 'cyclicQuad' */
+    bothRulesHighlight: {
+        defaultValue: '',
+        type: 'text',
+        label: 'Rule highlight',
+        description: 'Which rule is currently highlighted from the text',
+        color: '#62D0AD',
+        bgColor: 'rgba(98, 208, 173, 0.2)',
+    },
+
+    /** Assessment: applying the same-segment rule to a new value. */
+    answerSummarySameSegment: {
+        defaultValue: '',
+        type: 'text',
+        label: 'Matching corner',
+        description: 'Student answer for the second corner on the same chord',
+        placeholder: '???',
+        correctAnswer: ['47', '47°'],
+        color: '#8E90F5',
+    },
+
+    /** Assessment: applying the cyclic quadrilateral rule to a new value. */
+    answerSummaryCyclic: {
+        defaultValue: '',
+        type: 'text',
+        label: 'Facing corner',
+        description: 'Student answer for the corner facing a 120 degree corner',
+        placeholder: '???',
+        correctAnswer: ['60', '60°'],
+        color: '#8E90F5',
+    },
+
+    /** Assessment: using both rules one after the other. */
+    answerSummaryCombined: {
+        defaultValue: '',
+        type: 'text',
+        label: 'Two-rule answer',
+        description: 'Student answer for the corner found by using both rules in turn',
+        placeholder: '???',
+        correctAnswer: ['112', '112°'],
+        color: '#8E90F5',
+    },
+
     /** Assessment: how many chords three rim points make. */
     answerChordCount: {
         defaultValue: '',
