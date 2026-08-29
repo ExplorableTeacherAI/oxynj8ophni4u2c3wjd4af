@@ -12,8 +12,10 @@ import {
     EditableParagraph,
     InlineClozeInput,
     InlineFeedback,
+    InlineFormula,
     InlineLinkedHighlight,
     InteractionHintSequence,
+    Table,
 } from "@/components/atoms";
 import { Figure } from "@/components/molecules";
 import { useVar, useSetVar } from "@/stores";
@@ -479,6 +481,55 @@ export const bothTheoremsTogetherBlocks: ReactElement[] = [
                 same arc is 95 as well, and the corner facing it across the quadrilateral has to be
                 85.
             </EditableParagraph>
+        </Block>
+    </StackLayout>,
+
+    <StackLayout key="layout-both-theorems-formula-table" maxWidth="xl">
+        <Block id="both-theorems-formula-table" padding="sm">
+            <Table
+                columns={[
+                    { header: 'Rule', align: 'left' },
+                    { header: 'In symbols', align: 'center', width: 210 },
+                    { header: 'What it says', align: 'left' },
+                ]}
+                rows={[
+                    {
+                        cells: [
+                            'Angles in the same segment',
+                            <InlineFormula
+                                key="formula-same-segment"
+                                latex="\angle ABD = \angle ACD"
+                                colorMap={{}}
+                            />,
+                            'Two corners standing on the same chord from the same side are equal',
+                        ],
+                    },
+                    {
+                        cells: [
+                            'Opposite corners of a cyclic quadrilateral',
+                            <InlineFormula
+                                key="formula-cyclic-quadrilateral"
+                                latex="\angle A + \angle C = 180^\circ"
+                                colorMap={{}}
+                            />,
+                            'Corners facing each other across the shape add to 180 degrees',
+                        ],
+                    },
+                    {
+                        cells: [
+                            'All four corners together',
+                            <InlineFormula
+                                key="formula-corner-total"
+                                latex="\angle A + \angle B + \angle C + \angle D = 360^\circ"
+                                colorMap={{}}
+                            />,
+                            'Two facing pairs, each worth 180, so the whole shape comes to 360',
+                        ],
+                    },
+                ]}
+                color="#62D0AD"
+                caption="The two circle rules, and the total that follows from them."
+            />
         </Block>
     </StackLayout>,
 
