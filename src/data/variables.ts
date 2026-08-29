@@ -82,8 +82,64 @@ export interface VariableDefinition {
  */
 export const variableDefinitions: Record<string, VariableDefinition> = {
     // ========================================
-    // ADD YOUR VARIABLES HERE
+    // SECTION: Points, Chords and Arcs
     // ========================================
+
+    /** Angles (in degrees, measured anticlockwise from east) of the dots the
+     *  student has dropped on the circle's rim. Index 0 and 1 are the ends of
+     *  the chord; index 2 is the vertex of the angle standing on it. */
+    circlePartsPoints: {
+        defaultValue: [],
+        type: 'array',
+        label: 'Dots on the rim',
+        description: 'Rim positions of the dots the student has placed, in degrees',
+    },
+
+    /** Mirror of circlePartsPoints.length so guided hints can watch progress
+     *  and so a reset can be triggered by writing 0. */
+    circlePartsPointCount: {
+        defaultValue: 0,
+        type: 'number',
+        label: 'Dots placed',
+        description: 'How many dots the student has dropped on the rim',
+        min: 0,
+        max: 3,
+        step: 1,
+    },
+
+    /** Shared hover channel between the prose and the circle drawing.
+     *  Values: '' | 'chord' | 'arc' | 'angle' */
+    circlePartsHighlight: {
+        defaultValue: '',
+        type: 'text',
+        label: 'Circle part highlight',
+        description: 'Which part of the circle is currently highlighted',
+        color: '#62D0AD',
+        bgColor: 'rgba(98, 208, 173, 0.2)',
+    },
+
+    /** Assessment: where the vertex of an angle standing on a chord must sit. */
+    answerAngleVertexLocation: {
+        defaultValue: '',
+        type: 'select',
+        label: 'Angle vertex location',
+        description: 'Student answer for where the corner of the angle must sit',
+        placeholder: '???',
+        correctAnswer: 'edge',
+        options: ['centre', 'edge', 'chord', 'inside'],
+        color: '#8E90F5',
+    },
+
+    /** Assessment: how many chords three rim points make. */
+    answerChordCount: {
+        defaultValue: '',
+        type: 'text',
+        label: 'Number of chords',
+        description: 'Student answer for how many chords three points on the rim make',
+        placeholder: '???',
+        correctAnswer: ['3', 'three'],
+        color: '#8E90F5',
+    },
 
     // Uncomment and modify these examples for your lesson:
 
