@@ -130,6 +130,94 @@ export const variableDefinitions: Record<string, VariableDefinition> = {
         color: '#8E90F5',
     },
 
+    // ========================================
+    // SECTION: Angles in the Same Segment
+    // ========================================
+
+    /** Where the corner tucked near the chord sits on the upper arc (0 = beside
+     *  one chord end, 1 = beside the other). */
+    sameSegmentNearSpot: {
+        defaultValue: 0.08,
+        type: 'number',
+        label: 'Near corner position',
+        description: 'Position of the corner tucked close to the chord, along the upper arc',
+        min: 0.05,
+        max: 0.95,
+        step: 0.01,
+        color: '#62D0AD',
+    },
+
+    /** Where the corner high above the chord sits on the upper arc. */
+    sameSegmentFarSpot: {
+        defaultValue: 0.5,
+        type: 'number',
+        label: 'Far corner position',
+        description: 'Position of the corner high above the chord, along the upper arc',
+        min: 0.05,
+        max: 0.95,
+        step: 0.01,
+        color: '#62D0AD',
+    },
+
+    /** How wide the student has opened the faint copy of the near corner. */
+    sameSegmentGuess: {
+        defaultValue: 110,
+        type: 'number',
+        label: 'Guessed corner size',
+        description: 'Size the student thinks the near corner is, in degrees',
+        unit: '°',
+        min: 10,
+        max: 170,
+        step: 1,
+        color: '#94A3B8',
+    },
+
+    /** 0 before the student lets go of their guess, 1 once the real angles show.
+     *  Kept numeric so guided hint steps can watch it. */
+    sameSegmentRevealed: {
+        defaultValue: 0,
+        type: 'number',
+        label: 'Answer revealed',
+        description: 'Whether the true measurements are showing yet',
+        min: 0,
+        max: 1,
+        step: 1,
+    },
+
+    /** Shared hover channel between the prose and the two corners.
+     *  Values: '' | 'near' | 'far' */
+    sameSegmentHighlight: {
+        defaultValue: '',
+        type: 'text',
+        label: 'Corner highlight',
+        description: 'Which corner is currently highlighted',
+        color: '#62D0AD',
+        bgColor: 'rgba(98, 208, 173, 0.2)',
+    },
+
+    /** Assessment: how the near corner compares with the far one. */
+    answerNearCornerSize: {
+        defaultValue: '',
+        type: 'select',
+        label: 'Near corner comparison',
+        description: 'Student answer comparing the near corner with the far corner',
+        placeholder: '???',
+        correctAnswer: 'exactly the same',
+        options: ['bigger', 'smaller', 'exactly the same', 'impossible to tell'],
+        color: '#8E90F5',
+    },
+
+    /** Assessment: transferring the same-segment rule to a new value. */
+    answerSameSegmentTransfer: {
+        defaultValue: '',
+        type: 'text',
+        label: 'Matching angle',
+        description: 'Student answer for the second angle standing on the same chord',
+        placeholder: '???',
+        correctAnswer: ['38', '38°'],
+        color: '#8E90F5',
+    },
+
     /** Assessment: how many chords three rim points make. */
     answerChordCount: {
         defaultValue: '',
