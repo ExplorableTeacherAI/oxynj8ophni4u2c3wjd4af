@@ -345,25 +345,67 @@ export const variableDefinitions: Record<string, VariableDefinition> = {
     // SECTION: Both Theorems Together
     // ========================================
 
-    /** Five points on the rim, in degrees anticlockwise from east and kept in
-     *  order: 0 and 3 are the chord's ends, 1 and 2 stand on it from the same
-     *  side, and 4 completes the cyclic quadrilateral on the other arc. */
+    /** Six points on the rim, in degrees anticlockwise from east and kept in
+     *  order: 0 and 3 are the chord's ends, 1 is the corner whose size is given,
+     *  2 stands on the chord from the same side as it, and 4 and 5 stand on the
+     *  chord from the other side. */
     bothRulesPoints: {
-        defaultValue: [20, 76, 140, 190, 290],
+        defaultValue: [20, 80, 140, 190, 250, 310],
         type: 'array',
         label: 'Circle points',
-        description: 'Rim positions of the five points carrying both rules, in degrees',
+        description: 'Rim positions of the six points in the puzzle circle, in degrees',
     },
 
-    /** Which rule is lit: 0 = angles in the same segment, 1 = cyclic quadrilateral. */
-    bothRulesMode: {
+    /** Which hidden corner the student is working on: -1 for none, otherwise the
+     *  index of that point. */
+    puzzleSelected: {
+        defaultValue: -1,
+        type: 'number',
+        label: 'Selected corner',
+        description: 'Which hidden corner the student has clicked on',
+        min: -1,
+        max: 5,
+        step: 1,
+    },
+
+    /** The size the student is about to submit for the selected corner. */
+    puzzleTrial: {
+        defaultValue: 90,
+        type: 'number',
+        label: 'Trial answer',
+        description: 'The size the student is about to submit for the selected corner',
+        unit: '°',
+        min: 5,
+        max: 175,
+        step: 5,
+    },
+
+    /** Indices of the corners the student has already worked out. */
+    puzzleSolved: {
+        defaultValue: [],
+        type: 'array',
+        label: 'Corners found',
+        description: 'Indices of the hidden corners the student has worked out',
+    },
+
+    /** How many hidden corners have been found. Guided hints watch it, and
+     *  writing 0 clears the puzzle. */
+    puzzleSolvedCount: {
         defaultValue: 0,
         type: 'number',
-        label: 'Rule on show',
-        description: 'Which of the two rules is currently lit up',
+        label: 'Corners found so far',
+        description: 'How many hidden corners the student has worked out',
         min: 0,
-        max: 1,
+        max: 3,
         step: 1,
+    },
+
+    /** '' or 'wrong' — whether the last submitted answer missed. */
+    puzzleFeedback: {
+        defaultValue: '',
+        type: 'text',
+        label: 'Puzzle feedback',
+        description: 'Whether the last answer the student submitted was wrong',
     },
 
     /** Shared hover channel between the prose and the two rules.

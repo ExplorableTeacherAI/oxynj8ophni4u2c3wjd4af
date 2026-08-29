@@ -1,5 +1,6 @@
 import {
     useCallback,
+    useEffect,
     useRef,
     useState,
     type PointerEvent as ReactPointerEvent,
@@ -27,22 +28,22 @@ import {
 } from "../variables";
 
 /* ────────────────────────────────────────────────────────────────────────────
- * Bespoke figure — one circle carrying both rules.
+ * Bespoke figure — a circle puzzle solved one corner at a time.
  *
- * Five points sit on the rim. Points 0 and 3 are the ends of a chord; points 1
- * and 2 stand on that chord from the same side; point 4 completes a cyclic
- * quadrilateral on the other arc. Point 1 belongs to BOTH rules, which is the
- * whole idea: tapping a rule's name lights the angles it governs and dims the
- * rest, and every point can be dragged around the rim.
+ * Six points sit on the rim. Points 0 and 3 are the ends of a chord; point 1
+ * stands on it and shows its size; points 2, 4 and 5 are hidden behind the
+ * letters a, b and c. Clicking a letter picks that corner, and the answer is
+ * checked only when the student submits it, so a single given angle unlocks the
+ * whole circle: a copies the given corner, b faces it across the quadrilateral,
+ * and c copies b. Once all three are found every point becomes draggable.
  *
- * Positions snap to even degrees so every inscribed angle is a whole number and
- * the facing pair reads exactly 180.
+ * Positions are multiples of ten degrees, so every angle is a multiple of five.
  * ──────────────────────────────────────────────────────────────────────────── */
 
 const VIEW_WIDTH = 600;
 const VIEW_HEIGHT = 500;
 const CENTER_X = 300;
-const CENTER_Y = 265;
+const CENTER_Y = 255;
 const RADIUS = 150;
 const PAD = 24;
 
@@ -51,15 +52,22 @@ const INK_STRONG = "#334155";
 const INK_SOFT = "#64748B";
 const MUTED = "#94A3B8";
 
-const DEFAULT_POINTS = [20, 76, 140, 190, 290];
+const DEFAULT_POINTS = [20, 80, 140, 190, 250, 310];
 const CHORD_START = 0;
-const SHARED_CORNER = 1;
-const SAME_SIDE_CORNER = 2;
+const GIVEN_CORNER = 1;
 const CHORD_END = 3;
-const FACING_CORNER = 4;
+const HIDDEN_CORNERS = [2, 4, 5];
+const LETTERS: Record<number, string> = { 2: "a", 4: "b", 5: "c" };
 
 const SAME_SEGMENT = "sameSegment";
 const CYCLIC_QUAD = "cyclicQuad";
+
+/** Which rule links each hidden corner back to something already known. */
+const NUDGES: Record<number, string> = {
+    2: "a stands on the same chord as the given corner, on the same side of it.",
+    4: "b faces the given corner across the four-sided shape.",
+    5: "c stands on the same chord as b, on the same side of it.",
+};
 
 const formatDegrees = (value: number) => `${Math.round(value)}°`;
 
@@ -73,7 +81,7 @@ const rimPoint = (degrees: number): [number, number] => [
 
 const clampLabelX = (x: number, halfWidth: number) =>
     clamp(x, PAD + halfWidth, VIEW_WIDTH - PAD - halfWidth);
-const clampLabelY = (y: number) => clamp(y, 82, 438);
+const clampLabelY = (y: number) => clamp(y, 58, 440);
 
 const unitTo = (from: [number, number], to: [number, number]): [number, number] => {
     const dx = to[0] - from[0];
@@ -99,17 +107,43 @@ const cornerMarkerPath = (
     );
 };
 
-function BothRulesDrawing() {
+/** Corner 2 pairs with the given corner under the first rule, corner 4 under the second. */
+const groupOf = (index: number) =>
+    index === 2 ? SAME_SEGMENT : index === 4 ? CYCLIC_QUAD : null;
+
+const NO_POINTS: number[] = [];
+const NO_SOLVED: number[] = [];
+
+/** Every hidden corner and the given one stand on the same chord, so one helper
+ *  serves them all. */
+const angleReaderFor = (points: [number, number][]) => (index: number) =>
+    angleBetween(
+        unitTo(points[index], points[CHORD_START]),
+        unitTo(points[index], points[CHORD_END]),
+    );
+
+function PuzzleDrawing() {
     const setVar = useSetVar();
-    const positions = useVar<number[]>("bothRulesPoints", DEFAULT_POINTS);
-    const mode = useVar<number>("bothRulesMode", 0);
+    const positions = useVar<number[]>("bothRulesPoints", NO_POINTS);
+    const selected = useVar<number>("puzzleSelected", -1);
+    const solved = useVar<number[]>("puzzleSolved", NO_SOLVED);
+    const solvedCount = useVar<number>("puzzleSolvedCount", 0);
     const highlight = useVar<string>("bothRulesHighlight", "");
     const svgRef = useRef<SVGSVGElement>(null);
     const [dragging, setDragging] = useState<number | null>(null);
 
-    const points = positions.map(rimPoint);
-    const activeGroup = highlight !== "" ? highlight : mode === 1 ? CYCLIC_QUAD : SAME_SEGMENT;
-    const hovering = highlight !== "";
+    const points = (positions.length === 6 ? positions : DEFAULT_POINTS).map(rimPoint);
+    const angleAt = angleReaderFor(points);
+    const allFound = solved.length >= HIDDEN_CORNERS.length;
+
+    // Writing 0 to the count variable (reset button, guided hints) clears the puzzle.
+    useEffect(() => {
+        if (solvedCount === 0 && solved.length > 0) {
+            setVar("puzzleSolved", []);
+            setVar("puzzleSelected", -1);
+            setVar("puzzleFeedback", "");
+        }
+    }, [solvedCount, solved.length, setVar]);
 
     const toViewBox = useCallback((clientX: number, clientY: number): [number, number] => {
         const rect = svgRef.current?.getBoundingClientRect();
@@ -124,121 +158,137 @@ function BothRulesDrawing() {
         if (dragging !== index) return;
         const [x, y] = toViewBox(event.clientX, event.clientY);
         const pointerDegrees = (Math.atan2(CENTER_Y - y, x - CENTER_X) * 180) / Math.PI;
-        const count = positions.length;
-        const previous = positions[(index + count - 1) % count];
-        const span = norm360(positions[(index + 1) % count] - previous);
+        const current = positions.length === 6 ? positions : DEFAULT_POINTS;
+        const previous = current[(index + 5) % 6];
+        const span = norm360(current[(index + 1) % 6] - previous);
         const offset = clamp(norm360(pointerDegrees - previous), 12, span - 12);
-        const next = [...positions];
-        next[index] = norm360(Math.round((previous + offset) / 2) * 2);
+        const next = [...current];
+        next[index] = norm360(Math.round((previous + offset) / 10) * 10);
         setVar("bothRulesPoints", next);
     };
 
-    const cornerAngle = (vertex: number, armA: number, armB: number) =>
-        angleBetween(unitTo(points[vertex], points[armA]), unitTo(points[vertex], points[armB]));
-
-    const sharedAngle = cornerAngle(SHARED_CORNER, CHORD_START, CHORD_END);
-    const sameSideAngle = cornerAngle(SAME_SIDE_CORNER, CHORD_START, CHORD_END);
-    const facingAngle = cornerAngle(FACING_CORNER, CHORD_END, CHORD_START);
-
-    const groupOpacity = (group: string) => (group === activeGroup ? 1 : 0.35);
-    const neutralOpacity = hovering ? 0.35 : 1;
-    const popped = (group: string) => hovering && highlight === group;
+    const dimFor = (index: number) => {
+        if (highlight === "") return 1;
+        if (index === GIVEN_CORNER) return 1;
+        return groupOf(index) === highlight ? 1 : 0.3;
+    };
+    const litFor = (index: number) =>
+        highlight !== "" && (index === GIVEN_CORNER || groupOf(index) === highlight);
+    const neutralOpacity = highlight === "" ? 1 : 0.3;
     const eased = { transition: "opacity 150ms ease-out, stroke-width 150ms ease-out" };
 
-    const hoverProps = (group: string) => ({
-        onPointerEnter: () => setVar("bothRulesHighlight", group),
-        onPointerLeave: () => setVar("bothRulesHighlight", ""),
-    });
+    const hoverProps = (index: number) => {
+        const group = groupOf(index);
+        if (!group) return {};
+        return {
+            onPointerEnter: () => setVar("bothRulesHighlight", group),
+            onPointerLeave: () => setVar("bothRulesHighlight", ""),
+        };
+    };
 
-    const armLine = (
-        key: string,
-        from: number,
-        to: number,
-        group: string | null,
-        width: number,
-    ) => (
-        <line
-            key={key}
-            x1={points[from][0]}
-            y1={points[from][1]}
-            x2={points[to][0]}
-            y2={points[to][1]}
-            stroke={ACCENT}
-            strokeWidth={width}
-            strokeLinecap="round"
-            style={eased}
-            {...(group ? hoverProps(group) : {})}
-        />
-    );
+    const statusLine = allFound
+        ? "All three found. Drag any point to see both rules keep working."
+        : selected >= 0
+          ? `Working on ${LETTERS[selected]} — set your answer below and check it.`
+          : "One corner is given. Click a letter to work that corner out.";
 
-    const haloLine = (key: string, from: number, to: number) => (
-        <line
-            key={key}
-            x1={points[from][0]}
-            y1={points[from][1]}
-            x2={points[to][0]}
-            y2={points[to][1]}
-            stroke={ACCENT}
-            strokeWidth="10"
-            strokeLinecap="round"
-            opacity={0.28}
-            pointerEvents="none"
-        />
-    );
+    const foundLine = [
+        `given ${formatDegrees(angleAt(GIVEN_CORNER))}`,
+        ...HIDDEN_CORNERS.filter((index) => solved.includes(index)).map(
+            (index) => `${LETTERS[index]} = ${formatDegrees(angleAt(index))}`,
+        ),
+    ].join("   ·   ");
 
-    const readout =
-        activeGroup === CYCLIC_QUAD
-            ? `Facing corners: ${formatDegrees(sharedAngle)} + ${formatDegrees(
-                  facingAngle,
-              )} = ${formatDegrees(sharedAngle + facingAngle)}`
-            : `Same arc, same chord: ${formatDegrees(sharedAngle)} and ${formatDegrees(
-                  sameSideAngle,
-              )}`;
-
-    const ruleLabel = (group: string, y: number, text: string) => {
-        const isActive = activeGroup === group;
+    const renderCorner = (index: number) => {
+        const vertex = points[index];
+        const isSolved = index === GIVEN_CORNER || solved.includes(index);
+        const isSelected = selected === index;
+        const lit = litFor(index);
+        const outward = unitTo([CENTER_X, CENTER_Y], vertex);
+        const text = isSolved ? formatDegrees(angleAt(index)) : LETTERS[index];
+        const labelX = clampLabelX(vertex[0] + outward[0] * 34, 24);
+        const labelY = clampLabelY(vertex[1] + outward[1] * 34 + 5);
+        const armColor = isSolved ? ACCENT : MUTED;
         return (
-            <g
-                style={{ cursor: "pointer" }}
-                onClick={() => setVar("bothRulesMode", group === CYCLIC_QUAD ? 1 : 0)}
-                {...hoverProps(group)}
-            >
-                <circle
-                    cx={PAD + 5}
-                    cy={y - 4}
-                    r={isActive ? 5 : 3.5}
-                    fill={isActive ? ACCENT : MUTED}
-                    style={{ transition: "fill 150ms ease-out, r 150ms ease-out" }}
+            <g key={`corner-${index}`} opacity={dimFor(index)} style={eased}>
+                {lit && (
+                    <>
+                        <line x1={vertex[0]} y1={vertex[1]} x2={points[CHORD_START][0]} y2={points[CHORD_START][1]} stroke={ACCENT} strokeWidth="10" strokeLinecap="round" opacity={0.28} />
+                        <line x1={vertex[0]} y1={vertex[1]} x2={points[CHORD_END][0]} y2={points[CHORD_END][1]} stroke={ACCENT} strokeWidth="10" strokeLinecap="round" opacity={0.28} />
+                    </>
+                )}
+                <line
+                    x1={vertex[0]}
+                    y1={vertex[1]}
+                    x2={points[CHORD_START][0]}
+                    y2={points[CHORD_START][1]}
+                    stroke={armColor}
+                    strokeWidth={lit ? 5 : 3}
+                    strokeLinecap="round"
+                    style={eased}
+                    {...hoverProps(index)}
                 />
+                <line
+                    x1={vertex[0]}
+                    y1={vertex[1]}
+                    x2={points[CHORD_END][0]}
+                    y2={points[CHORD_END][1]}
+                    stroke={armColor}
+                    strokeWidth={lit ? 5 : 3}
+                    strokeLinecap="round"
+                    style={eased}
+                    {...hoverProps(index)}
+                />
+                <path
+                    d={cornerMarkerPath(
+                        vertex,
+                        unitTo(vertex, points[CHORD_START]),
+                        unitTo(vertex, points[CHORD_END]),
+                        26,
+                    )}
+                    fill="none"
+                    stroke={armColor}
+                    strokeWidth={lit ? 4 : 2}
+                    style={eased}
+                    pointerEvents="none"
+                />
+                {isSelected && !isSolved && (
+                    <circle cx={labelX} cy={labelY - 5} r="17" fill="none" stroke={ACCENT} strokeWidth="2" />
+                )}
                 <text
-                    x={PAD + 18}
-                    y={y}
-                    fontSize="13"
-                    fill={isActive ? ACCENT : MUTED}
-                    fontWeight={isActive ? 600 : 400}
-                    style={{ transition: "fill 150ms ease-out" }}
+                    x={labelX}
+                    y={labelY}
+                    fontSize="15"
+                    fontWeight={isSolved ? 400 : 600}
+                    textAnchor="middle"
+                    fill={isSolved ? ACCENT : INK_STRONG}
+                    pointerEvents="none"
+                    style={{ fontVariantNumeric: "tabular-nums" }}
                 >
                     {text}
                 </text>
+                {!isSolved && (
+                    <circle
+                        cx={labelX}
+                        cy={labelY - 5}
+                        r={20}
+                        fill="transparent"
+                        style={{ cursor: "pointer" }}
+                        onClick={() => {
+                            setVar("puzzleSelected", index);
+                            setVar("puzzleFeedback", "");
+                        }}
+                    />
+                )}
+                <circle
+                    cx={vertex[0]}
+                    cy={vertex[1]}
+                    r={dragging === index ? 11 : 8}
+                    fill={isSolved ? ACCENT : MUTED}
+                    filter="url(#puzzle-dot-shadow)"
+                    pointerEvents="none"
+                />
             </g>
-        );
-    };
-
-    const cornerLabel = (index: number, value: number, group: string | null) => {
-        const vertex = points[index];
-        const outward = unitTo([CENTER_X, CENTER_Y], vertex);
-        return (
-            <text
-                x={clampLabelX(vertex[0] + outward[0] * 34, 24)}
-                y={clampLabelY(vertex[1] + outward[1] * 34 + 5)}
-                fontSize="15"
-                textAnchor="middle"
-                fill={group === null || group === activeGroup ? ACCENT : MUTED}
-                pointerEvents="none"
-                style={{ fontVariantNumeric: "tabular-nums" }}
-            >
-                {formatDegrees(value)}
-            </text>
         );
     };
 
@@ -250,22 +300,23 @@ function BothRulesDrawing() {
             style={{ touchAction: "none" }}
         >
             <defs>
-                <filter id="both-rules-dot-shadow" x="-50%" y="-50%" width="200%" height="200%">
+                <filter id="puzzle-dot-shadow" x="-50%" y="-50%" width="200%" height="200%">
                     <feDropShadow dx="0" dy="1" stdDeviation="1.5" floodColor="#0F172A" floodOpacity="0.25" />
                 </filter>
             </defs>
 
-            {ruleLabel(SAME_SEGMENT, 30, "Angles in the same segment")}
-            {ruleLabel(CYCLIC_QUAD, 52, "Opposite corners of a cyclic quadrilateral")}
+            <text x={PAD} y={30} fontSize="13" fill={allFound ? ACCENT : INK_SOFT}>
+                {statusLine}
+            </text>
 
             <text
                 x={PAD}
-                y={470}
+                y={472}
                 fontSize="13"
                 fill={ACCENT}
                 style={{ fontVariantNumeric: "tabular-nums" }}
             >
-                {readout}
+                {foundLine}
             </text>
 
             {/* Rim */}
@@ -273,7 +324,7 @@ function BothRulesDrawing() {
                 <circle cx={CENTER_X} cy={CENTER_Y} r={RADIUS} fill="none" stroke={INK_SOFT} strokeWidth="2" />
             </g>
 
-            {/* The chord — the same line the quadrilateral uses as its diagonal */}
+            {/* The chord every corner in the puzzle stands on */}
             <g opacity={neutralOpacity} style={eased} pointerEvents="none">
                 <line
                     x1={points[CHORD_START][0]}
@@ -286,135 +337,151 @@ function BothRulesDrawing() {
                 />
             </g>
 
-            {/* Sides of the quadrilateral that only the second rule needs */}
-            <g opacity={groupOpacity(CYCLIC_QUAD)} style={eased}>
-                {popped(CYCLIC_QUAD) && haloLine("halo-facing-one", FACING_CORNER, CHORD_END)}
-                {popped(CYCLIC_QUAD) && haloLine("halo-facing-two", FACING_CORNER, CHORD_START)}
-                {armLine("facing-one", FACING_CORNER, CHORD_END, CYCLIC_QUAD, popped(CYCLIC_QUAD) ? 5 : 3)}
-                {armLine("facing-two", FACING_CORNER, CHORD_START, CYCLIC_QUAD, popped(CYCLIC_QUAD) ? 5 : 3)}
-                <path
-                    d={cornerMarkerPath(
-                        points[FACING_CORNER],
-                        unitTo(points[FACING_CORNER], points[CHORD_END]),
-                        unitTo(points[FACING_CORNER], points[CHORD_START]),
-                        28,
-                    )}
-                    fill="none"
-                    stroke={ACCENT}
-                    strokeWidth={popped(CYCLIC_QUAD) ? 4 : 2}
-                    style={eased}
-                    pointerEvents="none"
-                />
-                {cornerLabel(FACING_CORNER, facingAngle, CYCLIC_QUAD)}
-            </g>
+            {[GIVEN_CORNER, ...HIDDEN_CORNERS].map(renderCorner)}
 
-            {/* Arms that only the first rule needs */}
-            <g opacity={groupOpacity(SAME_SEGMENT)} style={eased}>
-                {popped(SAME_SEGMENT) && haloLine("halo-same-one", SAME_SIDE_CORNER, CHORD_START)}
-                {popped(SAME_SEGMENT) && haloLine("halo-same-two", SAME_SIDE_CORNER, CHORD_END)}
-                {armLine("same-one", SAME_SIDE_CORNER, CHORD_START, SAME_SEGMENT, popped(SAME_SEGMENT) ? 5 : 3)}
-                {armLine("same-two", SAME_SIDE_CORNER, CHORD_END, SAME_SEGMENT, popped(SAME_SEGMENT) ? 5 : 3)}
-                <path
-                    d={cornerMarkerPath(
-                        points[SAME_SIDE_CORNER],
-                        unitTo(points[SAME_SIDE_CORNER], points[CHORD_START]),
-                        unitTo(points[SAME_SIDE_CORNER], points[CHORD_END]),
-                        28,
-                    )}
-                    fill="none"
-                    stroke={ACCENT}
-                    strokeWidth={popped(SAME_SEGMENT) ? 4 : 2}
-                    style={eased}
-                    pointerEvents="none"
-                />
-                {cornerLabel(SAME_SIDE_CORNER, sameSideAngle, SAME_SEGMENT)}
-            </g>
-
-            {/* The corner both rules share */}
-            <g style={eased}>
-                {hovering && haloLine("halo-shared-one", SHARED_CORNER, CHORD_START)}
-                {hovering && haloLine("halo-shared-two", SHARED_CORNER, CHORD_END)}
-                {armLine("shared-one", SHARED_CORNER, CHORD_START, null, hovering ? 5 : 3)}
-                {armLine("shared-two", SHARED_CORNER, CHORD_END, null, hovering ? 5 : 3)}
-                <path
-                    d={cornerMarkerPath(
-                        points[SHARED_CORNER],
-                        unitTo(points[SHARED_CORNER], points[CHORD_START]),
-                        unitTo(points[SHARED_CORNER], points[CHORD_END]),
-                        28,
-                    )}
-                    fill="none"
-                    stroke={ACCENT}
-                    strokeWidth={hovering ? 4 : 2}
-                    style={eased}
-                    pointerEvents="none"
-                />
-                {cornerLabel(SHARED_CORNER, sharedAngle, null)}
-            </g>
-
-            {/* Every point is draggable */}
-            {positions.map((_, index) => {
-                const [x, y] = points[index];
-                return (
-                    <g key={`point-${index}`}>
-                        <circle
-                            cx={x}
-                            cy={y}
-                            r={dragging === index ? 11 : 8}
-                            fill={ACCENT}
-                            filter="url(#both-rules-dot-shadow)"
-                            pointerEvents="none"
-                        />
-                        <circle
-                            cx={x}
-                            cy={y}
-                            r={22}
-                            fill="transparent"
-                            style={{ cursor: dragging === index ? "grabbing" : "grab" }}
-                            onPointerDown={(event) => {
-                                event.currentTarget.setPointerCapture(event.pointerId);
-                                setDragging(index);
-                            }}
-                            onPointerMove={handleDrag(index)}
-                            onPointerUp={() => setDragging(null)}
-                            onPointerCancel={() => setDragging(null)}
-                        />
-                    </g>
-                );
-            })}
+            {/* Once the puzzle is out, every point can be moved */}
+            {allFound &&
+                points.map((position, index) => (
+                    <circle
+                        key={`drag-${index}`}
+                        cx={position[0]}
+                        cy={position[1]}
+                        r={22}
+                        fill="transparent"
+                        style={{ cursor: dragging === index ? "grabbing" : "grab" }}
+                        onPointerDown={(event) => {
+                            event.currentTarget.setPointerCapture(event.pointerId);
+                            setDragging(index);
+                        }}
+                        onPointerMove={handleDrag(index)}
+                        onPointerUp={() => setDragging(null)}
+                        onPointerCancel={() => setDragging(null)}
+                    />
+                ))}
         </svg>
+    );
+}
+
+function PuzzleControls() {
+    const setVar = useSetVar();
+    const positions = useVar<number[]>("bothRulesPoints", NO_POINTS);
+    const selected = useVar<number>("puzzleSelected", -1);
+    const trial = useVar<number>("puzzleTrial", 90);
+    const solved = useVar<number[]>("puzzleSolved", NO_SOLVED);
+    const feedback = useVar<string>("puzzleFeedback", "");
+
+    const points = (positions.length === 6 ? positions : DEFAULT_POINTS).map(rimPoint);
+    const angleAt = angleReaderFor(points);
+    const allFound = solved.length >= HIDDEN_CORNERS.length;
+
+    if (allFound) {
+        return (
+            <div className="px-6 pb-5 text-sm text-slate-500">
+                Every corner came from the one that was given. Drag any point around the rim and
+                watch both rules survive the move.
+            </div>
+        );
+    }
+
+    if (selected < 0) {
+        return (
+            <div className="px-6 pb-5 text-sm text-slate-500">
+                Click one of the letters in the circle to start on that corner.
+            </div>
+        );
+    }
+
+    const step = (delta: number) =>
+        setVar("puzzleTrial", clamp(trial + delta, 5, 175));
+
+    const check = () => {
+        if (Math.round(angleAt(selected)) === trial) {
+            setVar("puzzleSolved", [...solved, selected]);
+            setVar("puzzleSolvedCount", solved.length + 1);
+            setVar("puzzleSelected", -1);
+            setVar("puzzleFeedback", "");
+        } else {
+            setVar("puzzleFeedback", "wrong");
+        }
+    };
+
+    return (
+        <div className="px-6 pb-5">
+            <div className="flex flex-wrap items-center gap-3 text-sm text-slate-600">
+                <span>Your answer for {LETTERS[selected]}:</span>
+                <button
+                    type="button"
+                    onClick={() => step(-5)}
+                    className="h-7 w-7 rounded-full bg-slate-100 text-slate-600 transition-colors hover:bg-slate-200"
+                    aria-label="Smaller"
+                >
+                    −
+                </button>
+                <span
+                    className="min-w-[3.5rem] text-center text-base font-medium text-slate-700"
+                    style={{ fontVariantNumeric: "tabular-nums" }}
+                >
+                    {formatDegrees(trial)}
+                </span>
+                <button
+                    type="button"
+                    onClick={() => step(5)}
+                    className="h-7 w-7 rounded-full bg-slate-100 text-slate-600 transition-colors hover:bg-slate-200"
+                    aria-label="Bigger"
+                >
+                    +
+                </button>
+                <button
+                    type="button"
+                    onClick={check}
+                    className="rounded-full px-4 py-1 font-medium transition-opacity hover:opacity-80"
+                    style={{ backgroundColor: "rgba(98, 208, 173, 0.22)", color: "#0F766E" }}
+                >
+                    Check
+                </button>
+            </div>
+            {feedback === "wrong" && (
+                <div className="pt-2 text-sm" style={{ color: "#B45309" }}>
+                    Not that one. {NUDGES[selected]}
+                </div>
+            )}
+        </div>
     );
 }
 
 function BothRulesFigure() {
     const setVar = useSetVar();
-    const mode = useVar<number>("bothRulesMode", 0);
+    const solvedCount = useVar<number>("puzzleSolvedCount", 0);
 
     return (
         <Figure
-            id="both-rules-one-circle"
-            caption="One circle, both rules, and one corner shared between them. Tap a rule's name at the top to light the angles it governs, and drag any point around the rim to check the rule survives."
+            id="both-rules-circle-puzzle"
+            caption="One corner is given and the rest hide behind letters. Click a letter, set the size you have worked out and check it: each rule unlocks the next corner, and once all three are found every point can be dragged."
             onReset={() => {
                 setVar("bothRulesPoints", DEFAULT_POINTS);
-                setVar("bothRulesMode", 0);
+                setVar("puzzleSolved", []);
+                setVar("puzzleSolvedCount", 0);
+                setVar("puzzleSelected", -1);
+                setVar("puzzleTrial", 90);
+                setVar("puzzleFeedback", "");
                 setVar("bothRulesHighlight", "");
             }}
         >
-            <BothRulesDrawing />
+            <PuzzleDrawing />
+            <PuzzleControls />
             <InteractionHintSequence
-                hintKey="both-rules-tap-then-drag"
-                currentStep={mode === 1 ? 1 : 0}
+                hintKey="both-rules-circle-puzzle"
+                currentStep={solvedCount > 0 ? 1 : 0}
                 steps={[
                     {
                         gesture: "click",
-                        label: "Tap a rule to light up its angles",
-                        position: { x: "36%", y: "10%" },
+                        label: "Click the letter a to start on that corner",
+                        position: { x: "27%", y: "27%" },
                     },
                     {
-                        gesture: "drag-circular",
-                        label: "Drag any point around the rim",
-                        position: { x: "74%", y: "35%" },
-                        dragPath: { type: "arc", startAngle: 30, endAngle: -30, radius: 32 },
+                        gesture: "click",
+                        label: "Now click another letter and work that corner out",
+                        position: { x: "40%", y: "86%" },
                     },
                 ]}
             />
@@ -434,9 +501,9 @@ export const bothTheoremsTogetherBlocks: ReactElement[] = [
     <StackLayout key="layout-both-theorems-summary" maxWidth="xl">
         <Block id="both-theorems-summary" padding="sm">
             <EditableParagraph id="para-both-theorems-summary" blockId="both-theorems-summary">
-                Two rules, and that is the whole toolkit. Both live in the circle below, sharing a
-                single corner: tap a rule's name to light the angles it governs, then drag any point
-                to check it still holds.
+                Two rules, and that is the whole toolkit. In the circle below only one corner
+                shows its size and the rest hide behind letters, so each answer you find hands you
+                the next one.
             </EditableParagraph>
         </Block>
     </StackLayout>,
@@ -600,14 +667,22 @@ export const bothTheoremsTogetherBlocks: ReactElement[] = [
                         blockId: "both-theorems-visual",
                         hintKey: "feedback-both-theorems-combined",
                         label: "Discover it yourself",
-                        resetVars: { bothRulesMode: 0 },
+                        resetVars: { puzzleSolvedCount: 0 },
                         steps: [
                             {
                                 gesture: "click",
-                                label: "Tap the second rule and watch the facing corner make 180 with the shared one",
-                                position: { x: "36%", y: "10%" },
-                                completionVar: "bothRulesMode",
+                                label: "Click the letter a and carry the given corner across to it",
+                                position: { x: "27%", y: "27%" },
+                                completionVar: "puzzleSolvedCount",
                                 completionValue: 1,
+                                completionTolerance: 0.4,
+                            },
+                            {
+                                gesture: "click",
+                                label: "Now click b, the corner facing the given one, and use 180",
+                                position: { x: "40%", y: "86%" },
+                                completionVar: "puzzleSolvedCount",
+                                completionValue: 2,
                                 completionTolerance: 0.4,
                             },
                         ],
